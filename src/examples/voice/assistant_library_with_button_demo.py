@@ -27,6 +27,7 @@ It is available for Raspberry Pi 2/3 only; Pi Zero is not supported.
 import logging
 import sys
 import threading
+import argparse
 
 import aiy.assistant.auth_helpers
 import aiy.voicehat
@@ -47,10 +48,11 @@ class MyAssistant(object):
     thread. Otherwise, the on_button_pressed() method will never get a chance to
     be invoked.
     """
-    def __init__(self):
+    def __init__(self, device_model_id):
         self._task = threading.Thread(target=self._run_task)
         self._can_start_conversation = False
         self._assistant = None
+        self._device_model_id = device_model_id
 
     def start(self):
         """Starts the assistant.
@@ -61,7 +63,7 @@ class MyAssistant(object):
 
     def _run_task(self):
         credentials = aiy.assistant.auth_helpers.get_assistant_credentials()
-        with Assistant(credentials) as assistant:
+        with Assistant(credentials, self._device_model_id) as assistant:
             self._assistant = assistant
             for event in assistant.start():
                 self._process_event(event)
@@ -101,7 +103,11 @@ class MyAssistant(object):
 
 
 def main():
-    MyAssistant().start()
+    parser = argparse.ArgumentParser(
+            formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--device_model_id', type=str, metavar='DEVICE_MODEL_ID', required=True, help='The device model ID registered with Google')
+    args = parser.parse_args()
+    MyAssistant(args.device_model_id).start()
 
 
 if __name__ == '__main__':

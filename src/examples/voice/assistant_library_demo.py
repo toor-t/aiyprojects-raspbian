@@ -26,6 +26,7 @@ It is available for Raspberry Pi 2/3 only; Pi Zero is not supported.
 
 import logging
 import sys
+import argparse
 
 import aiy.assistant.auth_helpers
 import aiy.voicehat
@@ -59,8 +60,13 @@ def process_event(event):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+           formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--device_model_id', type=str, metavar='DEVICE_MODEL_ID', required=True, help='The device model ID registered with Google')
+    args = parser.parse_args()
+
     credentials = aiy.assistant.auth_helpers.get_assistant_credentials()
-    with Assistant(credentials) as assistant:
+    with Assistant(credentials, args.device_model_id) as assistant:
         for event in assistant.start():
             process_event(event)
 
