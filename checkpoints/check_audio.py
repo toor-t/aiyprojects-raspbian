@@ -19,6 +19,7 @@
 import fileinput
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -26,6 +27,8 @@ import traceback
 
 import aiy.audio  # noqa
 from aiy._drivers._hat import get_aiy_device_name
+
+AIY_PROJECTS_DIR = os.path.dirname(os.path.dirname(__file__))
 
 CARDS_PATH = '/proc/asound/cards'
 CARDS_ID = {
@@ -38,6 +41,7 @@ STOP_DELAY = 1.0
 TEST_SOUND_PATH = '/usr/share/sounds/alsa/Front_Center.wav'
 
 RECORD_DURATION_SECONDS = 3
+
 
 def get_sound_cards():
     """Read a dictionary of ALSA cards from /proc, indexed by number."""
@@ -76,6 +80,20 @@ def check_voicehat_is_first_card():
     cards = get_sound_cards()
     card_id = CARDS_ID[get_aiy_device_name()]
     return 0 in cards and card_id in cards[0]
+
+
+def check_asoundrc_is_not_bad():
+    """Check that ~/.asoundrc is absent or has the AIY config."""
+    asoundrc = os.path.expanduser('~/.asoundrc')
+    if not os.path.exists(asoundrc):
+        return True
+
+    with open(os.path.join(AIY_PROJECTS_DIR, 'scripts', 'asound.conf')) as f:
+        wanted_contents = f.read()
+    with open(asoundrc) as f:
+        contents = f.read()
+
+    return contents == wanted_contents
 
 
 def check_speaker_works():
@@ -120,10 +138,20 @@ how to setup the voiceHAT driver: https://git.io/v99yK"""))
 may be unable to find it. Please try removing other sound drivers."""))
         return
 
-    if not check_speaker_works():
-        print(textwrap.fill(
-            """There may be a problem with your speaker. Check that it's
+    try:
+        if not check_speaker_works():
+            print(textwrap.fill(
+                """There may be a problem with your speaker. Check that it's
 connected properly."""))
+            return
+    except BrokenPipeError:
+        # aplay crashed - check if ~/.asoundrc is the culprit
+        if not check_asoundrc_is_not_bad():
+            print(textwrap.fill(
+                """~/.asoundrc exists, and it doesn't have the expected
+contents. Try deleting it with `rm ~/.asoundrc`."""))
+        else:
+            print("aplay crashed - try checking your ALSA config.")
         return
 
     if not check_mic_works():
@@ -135,21 +163,7 @@ connected properly."""))
     print('The audio seems to be working.')
 
 
-def enable_audio_driver():
-    print(textwrap.fill(
-        """Enabling audio driver for VoiceKit."""))
-    for line in fileinput.input("/boot/config.txt",
-                                inplace=True, backup=".bak"):
-        if re.match("^# dtoverlay=googlevoicehat-soundcard", line):
-            print("dtoverlay=googlevoicehat-soundcard")
-        else:
-            print(line, end='')
-    os.system("dtoverlay googlevoicehat-soundcard")
-
-
 def main():
-    if get_aiy_device_name() == 'Voice Hat':
-        enable_audio_driver()
     do_checks()
 
 
