@@ -46,12 +46,8 @@ class MyAssistant(object):
     thread. Otherwise, the on_button_pressed() method will never get a chance to
     be invoked.
     """
-<<<<<<< HEAD
-    def __init__(self, device_model_id):
-=======
 
     def __init__(self):
->>>>>>> upstream/aiyprojects
         self._task = threading.Thread(target=self._run_task)
         self._can_start_conversation = False
         self._assistant = None
