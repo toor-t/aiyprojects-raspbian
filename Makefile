@@ -1,4 +1,4 @@
-PI ?= raspberrypi.local
+PI ?= localhost
 
 SHORTCUTS = $(wildcard shortcuts/*.desktop)
 
